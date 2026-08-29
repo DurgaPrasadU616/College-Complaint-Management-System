@@ -1,0 +1,32 @@
+const authService = require("../services/authService");
+
+const register = async (req, res, next) => {
+  try {
+    const { name, email, password, role, department } = req.body;
+    const result = await authService.register({ name, email, password, role, department });
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    const result = await authService.login({ email, password });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMe = async (req, res, next) => {
+  try {
+    const user = await authService.getMe(req.user.id);
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { register, login, getMe };
