@@ -1,17 +1,22 @@
-const statusColors = {
-  submitted: "bg-gray-100 text-gray-700",
-  under_review: "bg-yellow-100 text-yellow-700",
-  assigned: "bg-blue-100 text-blue-700",
-  in_progress: "bg-indigo-100 text-indigo-700",
-  resolved: "bg-green-100 text-green-700",
-  closed: "bg-emerald-100 text-emerald-700",
+const statusConfig = {
+  submitted: { color: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" },
+  under_review: { color: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-400" },
+  assigned: { color: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-400" },
+  in_progress: { color: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-400" },
+  resolved: { color: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-400" },
+  closed: { color: "bg-teal-50 text-teal-700 ring-teal-200", dot: "bg-teal-400" },
 };
 
 export default function StatusBadge({ status }) {
-  const colorClass = statusColors[status] || "bg-gray-100 text-gray-700";
+  const config = statusConfig[status] || statusConfig.submitted;
+  const label = status?.replace(/_/g, " ") || "unknown";
+
   return (
-    <span className={`text-xs px-2 py-1 rounded ${colorClass}`}>
-      {status?.replace(/_/g, " ") || "unknown"}
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ring-1 ring-inset ${config.color}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+      {label.charAt(0).toUpperCase() + label.slice(1)}
     </span>
   );
 }
