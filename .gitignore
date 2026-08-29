@@ -5,3 +5,6 @@ dist/
 build/
 .DS_Store
 *.log
+server/server_output.txt
+server/server_error.txt
+server/test_db.js
