@@ -10,6 +10,10 @@ export default function StudentComplaintDetail() {
   const [complaint, setComplaint] = useState(null);
   const [updates, setUpdates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [hoveredStar, setHoveredStar] = useState(0);
 
   useEffect(() => {
     const fetchComplaint = async () => {
@@ -25,6 +29,29 @@ export default function StudentComplaintDetail() {
     };
     fetchComplaint();
   }, [id]);
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    if (feedbackRating === 0) {
+      toast.error("Please select a rating");
+      return;
+    }
+    setFeedbackSubmitting(true);
+    try {
+      const { data } = await api.post(`/complaints/${id}/feedback`, {
+        rating: feedbackRating,
+        comment: feedbackComment || undefined,
+      });
+      setComplaint(data);
+      toast.success("Feedback submitted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to submit feedback");
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
+  const canFeedback = complaint && ["resolved", "closed"].includes(complaint.status) && !complaint.feedback?.rating;
 
   if (loading) {
     return (
@@ -124,6 +151,80 @@ export default function StudentComplaintDetail() {
                   </a>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Feedback Section */}
+          {complaint.feedback?.rating && (
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-lg font-semibold mb-3">Your Feedback</h2>
+              <div className="flex items-center gap-1 mb-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <svg key={star} className={`w-5 h-5 ${star <= complaint.feedback.rating ? "text-yellow-400" : "text-gray-200"}`} fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              {complaint.feedback.comment && (
+                <p className="text-gray-700">{complaint.feedback.comment}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-2">
+                Submitted {new Date(complaint.feedback.submittedAt).toLocaleString()}
+              </p>
+            </div>
+          )}
+
+          {canFeedback && (
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-lg font-semibold mb-3">Leave Feedback</h2>
+              <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setFeedbackRating(star)}
+                        onMouseEnter={() => setHoveredStar(star)}
+                        onMouseLeave={() => setHoveredStar(0)}
+                        className="focus:outline-none"
+                      >
+                        <svg
+                          className={`w-8 h-8 cursor-pointer transition ${
+                            star <= (hoveredStar || feedbackRating) ? "text-yellow-400" : "text-gray-200"
+                          }`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      </button>
+                    ))}
+                    {feedbackRating > 0 && (
+                      <span className="ml-2 text-sm text-gray-500">{feedbackRating}/5</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Comment (optional)</label>
+                  <textarea
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                    rows={3}
+                    maxLength={1000}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Share your experience with the resolution..."
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={feedbackSubmitting || feedbackRating === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm disabled:opacity-50"
+                >
+                  {feedbackSubmitting ? "Submitting..." : "Submit Feedback"}
+                </button>
+              </form>
             </div>
           )}
         </div>

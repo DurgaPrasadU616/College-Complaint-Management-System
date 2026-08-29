@@ -65,6 +65,20 @@ const complaintSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    feedback: {
+      rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+      },
+      comment: {
+        type: String,
+        trim: true,
+      },
+      submittedAt: {
+        type: Date,
+      },
+    },
   },
   { timestamps: true }
 );

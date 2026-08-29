@@ -1,5 +1,29 @@
 const Complaint = require("../models/Complaint");
 const ComplaintUpdate = require("../models/ComplaintUpdate");
+const Notification = require("../models/Notification");
+
+const STATUS_LABELS = {
+  submitted: "Submitted",
+  under_review: "Under Review",
+  assigned: "Assigned",
+  in_progress: "In Progress",
+  resolved: "Resolved",
+  closed: "Closed",
+};
+
+const notifyStudent = async (complaint, actorName, previousStatus, newStatus, comment) => {
+  try {
+    await Notification.create({
+      owner: complaint.submittedBy,
+      complaintId: complaint._id,
+      type: "status_change",
+      title: "Complaint Status Updated",
+      message: `Your complaint "${complaint.title}" was changed from ${STATUS_LABELS[previousStatus] || previousStatus} to ${STATUS_LABELS[newStatus] || newStatus}${comment ? ` — ${comment}` : ""}.`,
+    });
+  } catch (_) {
+    // notification failure should not break the main flow
+  }
+};
 
 const createComplaint = async (data, userId) => {
   const complaint = await Complaint.create({ ...data, submittedBy: userId });
@@ -100,6 +124,8 @@ const assignComplaint = async (complaintId, { assignedDepartment, assignedTo }, 
     comment: `Assigned to ${assignedDepartment || "department"}`,
   });
 
+  await notifyStudent(complaint, "admin", previousStatus, "assigned", `Assigned to ${assignedDepartment || "department"}`);
+
   return complaint.populate("assignedTo", "name email");
 };
 
@@ -124,6 +150,8 @@ const updateStatus = async (complaintId, { status, comment }, adminId) => {
     newStatus: status,
     comment,
   });
+
+  await notifyStudent(complaint, "admin", previousStatus, status, comment);
 
   return complaint;
 };
@@ -176,6 +204,48 @@ const resolveComplaint = async (complaintId, { resolutionDetails }, adminId) => 
     comment: resolutionDetails || "Complaint resolved",
   });
 
+  await notifyStudent(complaint, "admin", previousStatus, "resolved", resolutionDetails || "Complaint resolved");
+
+  return complaint;
+};
+
+const submitFeedback = async (complaintId, { rating, comment }, userId) => {
+  const complaint = await Complaint.findById(complaintId);
+  if (!complaint) {
+    const error = new Error("Complaint not found");
+    error.statusCode = 404;
+    error.code = "NOT_FOUND";
+    throw error;
+  }
+
+  if (complaint.submittedBy.toString() !== userId.toString()) {
+    const error = new Error("Not authorized to submit feedback for this complaint");
+    error.statusCode = 403;
+    error.code = "FORBIDDEN";
+    throw error;
+  }
+
+  if (!["resolved", "closed"].includes(complaint.status)) {
+    const error = new Error("Feedback can only be submitted for resolved or closed complaints");
+    error.statusCode = 400;
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  if (complaint.feedback && complaint.feedback.rating) {
+    const error = new Error("Feedback has already been submitted for this complaint");
+    error.statusCode = 400;
+    error.code = "VALIDATION_ERROR";
+    throw error;
+  }
+
+  complaint.feedback = {
+    rating,
+    comment,
+    submittedAt: new Date(),
+  };
+  await complaint.save();
+
   return complaint;
 };
 
@@ -188,4 +258,5 @@ module.exports = {
   updateStatus,
   updatePriority,
   resolveComplaint,
+  submitFeedback,
 };

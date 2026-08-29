@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../services/api";
 import StatusBadge from "../../components/StatusBadge/StatusBadge";
 import PriorityBadge from "../../components/PriorityBadge/PriorityBadge";
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 
 const STATUSES = ["", "submitted", "under_review", "assigned", "in_progress", "resolved", "closed"];
 const CATEGORIES = ["", "Classroom", "Lab", "Hostel", "Wi-Fi/Network", "Infrastructure", "Transportation", "Cleanliness", "Other"];
@@ -62,9 +63,12 @@ export default function AdminComplaints() {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold">All Complaints</h1>
-        <Link to="/admin/dashboard" className="text-sm text-blue-600 hover:underline">
-          Back to Dashboard
-        </Link>
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <Link to="/admin/dashboard" className="text-sm text-blue-600 hover:underline">
+            Back to Dashboard
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

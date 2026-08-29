@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../services/api";
 import StatusBadge from "../../components/StatusBadge/StatusBadge";
 import PriorityBadge from "../../components/PriorityBadge/PriorityBadge";
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -46,12 +47,15 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <Link
-          to="/admin/complaints"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
-        >
-          View All Complaints
-        </Link>
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <Link
+            to="/admin/complaints"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+          >
+            View All Complaints
+          </Link>
+        </div>
       </div>
 
       {/* Summary Cards */}

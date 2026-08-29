@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../services/api";
 import StatusBadge from "../../components/StatusBadge/StatusBadge";
 import PriorityBadge from "../../components/PriorityBadge/PriorityBadge";
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 
 export default function MyComplaints() {
   const [complaints, setComplaints] = useState([]);
@@ -39,12 +40,15 @@ export default function MyComplaints() {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold">My Complaints</h1>
-        <Link
-          to="/student/new-complaint"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
-        >
-          + New Complaint
-        </Link>
+        <div className="flex items-center gap-3">
+          <NotificationBell />
+          <Link
+            to="/student/new-complaint"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+          >
+            + New Complaint
+          </Link>
+        </div>
       </div>
 
       {complaints.length === 0 ? (

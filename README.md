@@ -175,7 +175,13 @@ cd Complaint-Management-System
 
 ### Environment Variables
 
-Create a `.env` file in the `server/` directory with the following variables:
+Copy the example environment file and fill in your own values:
+
+```bash
+cp server/.env.example server/.env
+```
+
+Then edit `server/.env` with the following variables:
 
 ```env
 # Server

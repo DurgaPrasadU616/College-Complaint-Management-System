@@ -113,6 +113,20 @@ const resolveComplaint = async (req, res, next) => {
   }
 };
 
+const submitFeedback = async (req, res, next) => {
+  try {
+    const { rating, comment } = req.body;
+    const complaint = await complaintService.submitFeedback(
+      req.params.id,
+      { rating, comment },
+      req.user.id
+    );
+    res.json(complaint);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createComplaint,
   getMyComplaints,
@@ -122,4 +136,5 @@ module.exports = {
   updateStatus,
   updatePriority,
   resolveComplaint,
+  submitFeedback,
 };
