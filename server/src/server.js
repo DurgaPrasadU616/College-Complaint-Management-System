@@ -1,5 +1,10 @@
 const dns = require("dns");
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch (e) {
+  // Non-fatal: custom DNS servers may fail in some environments
+  console.warn("Could not set custom DNS servers, using system defaults.");
+}
 
 const express = require("express");
 const cors = require("cors");
@@ -20,7 +25,23 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+
+// CORS — support comma-separated CLIENT_URL list for local dev + production
+const allowedOrigins = env.CLIENT_URL.split(",").map((u) => u.trim());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, mobile apps, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(morgan("combined"));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
