@@ -2,57 +2,63 @@
 
 > A centralized digital platform for students to report campus issues and track them through to resolution.
 
+**Status:** Deployed and live
+
+| | |
+|---|---|
+| Live App | <!-- paste Vercel URL here, e.g. https://your-app.vercel.app --> _pending deployment_ |
+| Backend API | <!-- paste Render URL here, e.g. https://your-api.onrender.com --> _pending deployment_ |
+| Database | MongoDB Atlas |
+
+![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwind-css&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
-![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
 
 ---
 
 ## Overview
 
-The College Complaint Management System is a web-based application designed to replace the manual, ad-hoc complaint process with a structured digital workflow. Students can submit complaints related to classrooms, laboratories, hostels, Wi-Fi, infrastructure, transportation, cleanliness, or any other campus facility — complete with category, location, and optional file attachments.
+Students submit complaints (classroom issues, Wi-Fi outages, hostel problems, etc.) with a category, location, and optional file attachments. Each complaint follows a defined lifecycle — **Submitted → Under Review → Assigned → In Progress → Resolved → Closed** — with timestamped audit logs at every transition.
 
-The system connects students with the appropriate college department or administrator, providing full visibility into complaint status. Every complaint follows a defined lifecycle from submission through resolution, with timestamps and actor logging at each transition for full auditability.
+Administrators get a unified dashboard to triage, assign, prioritize, and resolve complaints across the college. Students see real-time status updates and can track their complaint history.
 
-Students can track their complaint history and view admin updates, while administrators have a unified dashboard to triage, assign, prioritize, and resolve issues across the entire college.
-
-> See `spec.md` for the complete technical specification.
+> See `spec.md` for the original technical specification.
 
 ---
 
 ## Features
 
-### Core Features
+### Implemented and Working
 
-- User authentication with JWT-based sessions and role separation (student/admin)
-- Student dashboard with complaint summary by status
-- Complaint submission with category, description, location, priority, and file attachments
-- Complaint categories: Classroom, Lab, Hostel, Wi-Fi/Network, Infrastructure, Transportation, Cleanliness, Other
-- Complaint status tracking through a defined lifecycle pipeline
-- Complaint history and details page with attachments, status timeline, and admin comments
-- Admin dashboard with complaint counts by status, category, and priority
-- Admin complaint management with search and multi-criteria filtering
-- Department/staff assignment and priority setting (Low / Medium / High / Critical)
-- Status management to move complaints through the pipeline
-- Admin comments and resolution notes
-- Basic complaint statistics (totals, resolved vs. open)
-- Responsive UI for desktop and mobile browsers
-- Image/file attachment upload and retrieval
+- JWT authentication with role separation (student / admin)
+- Student dashboard with complaint counts by status
+- Complaint submission with category, location, and file/image attachments
+- Complaint history and detail page with status timeline and admin comments
+- Admin dashboard with aggregated stats (by status, category, priority, department)
+- Admin complaint list with search and multi-criteria filtering
+- Department/staff assignment
+- Priority setting (Low / Medium / High / Critical)
+- Status management through the full pipeline
+- Resolution notes
+- Student feedback and rating after resolution
+- Notification bell with read/unread state
+- Responsive UI (mobile, tablet, desktop)
+- Skeleton loaders, empty states, and error toasts
+- Cloudinary integration for persistent file storage (with local disk fallback)
 
-### Bonus / Planned Features
+### Not Yet Implemented
 
 - Email notifications on status change (Nodemailer)
-- Real-time status notifications (Socket.IO)
-- Admin analytics dashboard with charts by category/department/time
-- Department-wise statistics and resolution time tracking
-- Student feedback and resolution rating after closure
+- Real-time notifications via Socket.IO
+- Analytics dashboard with charts
+- Resolution time tracking
 - Duplicate complaint detection
-- AI-based complaint categorization from free-text description
-- AI-generated complaint summaries for admins
-- Image-based issue classification
-- Automatic escalation for complaints unresolved past an SLA window
-- Mobile-responsive / installable PWA interface
+- AI-based categorization or summarization
+- Automatic SLA escalation
+- PWA / installable app
 
 ---
 
@@ -82,12 +88,11 @@ flowchart LR
 
 | Layer | Technology |
 |---|---|
-| Frontend | React (Vite) or Next.js, Tailwind CSS, Zustand/Context API, Axios, react-hot-toast, lucide-react |
-| Backend | Node.js, Express, Mongoose, JSON Web Tokens, bcryptjs, multer, express-validator, helmet, morgan, cors |
-| Database | MongoDB (MongoDB Atlas) |
-| Storage | Local disk or Cloudinary/S3-compatible bucket |
-| Notifications | Nodemailer (email), Socket.IO (real-time) |
-| Deployment | Vercel/Netlify (frontend), Render/Railway (backend), MongoDB Atlas (database) |
+| Frontend | React 18, Vite 5, Tailwind CSS 3, Zustand, Axios, react-hot-toast, lucide-react, React Router 6 |
+| Backend | Node.js, Express 4, Mongoose 8, JSON Web Tokens, bcryptjs, multer, express-validator, helmet, morgan, cors |
+| File Storage | Cloudinary (production) / local disk (development) via multer-storage-cloudinary |
+| Database | MongoDB Atlas |
+| Deployment | Vercel (frontend), Render (backend) |
 
 ---
 
@@ -99,14 +104,17 @@ flowchart LR
 client/
 └── src/
     ├── components/
-    │   ├── AppShell/
-    │   ├── ComplaintCard/
-    │   ├── ComplaintForm/
-    │   ├── StatusBadge/
-    │   ├── StatsWidgets/
-    │   └── ProtectedRoute/
+    │   ├── AppShell/          # Responsive nav shell with mobile menu
+    │   ├── ComplaintCard/     # Reusable complaint list card
+    │   ├── ComplaintForm/     # Complaint form (placeholder)
+    │   ├── NotificationBell/  # Notification dropdown
+    │   ├── PriorityBadge/     # Color-coded priority pill
+    │   ├── ProtectedRoute/    # Auth + role guard
+    │   ├── Skeleton/          # Skeleton loader variants
+    │   ├── StatsWidgets/      # Dashboard stat cards
+    │   └── StatusBadge/       # Color-coded status pill
     ├── pages/
-    │   ├── index.jsx
+    │   ├── index.jsx          # Landing page
     │   ├── login.jsx
     │   ├── register.jsx
     │   ├── student/
@@ -118,10 +126,11 @@ client/
     │       ├── dashboard.jsx
     │       ├── complaints.jsx
     │       └── complaint/[id].jsx
-    ├── store/
-    │   └── authStore.js
-    └── services/
-        └── api.js
+    ├── services/
+    │   └── api.js             # Axios instance with auth interceptors
+    └── store/
+        ├── authStore.js       # Zustand auth state
+        └── notificationStore.js
 ```
 
 ### Backend
@@ -130,21 +139,23 @@ client/
 server/
 └── src/
     ├── config/
-    │   ├── env.js
-    │   └── db.js
+    │   ├── env.js             # Environment variable loader
+    │   └── db.js              # MongoDB connection
     ├── routes/
     │   ├── authRoutes.js
     │   ├── complaintRoutes.js
     │   ├── departmentRoutes.js
+    │   ├── notificationRoutes.js
     │   └── statsRoutes.js
     ├── controllers/
     │   ├── authController.js
     │   ├── complaintController.js
+    │   ├── notificationController.js
     │   └── statsController.js
     ├── services/
     │   ├── authService.js
     │   ├── complaintService.js
-    │   └── uploadService.js
+    │   └── uploadService.js   # Cloudinary + local disk fallback
     ├── models/
     │   ├── User.js
     │   ├── Complaint.js
@@ -152,8 +163,9 @@ server/
     │   ├── Department.js
     │   └── Notification.js
     └── middleware/
-        ├── authMiddleware.js
-        └── errorHandler.js
+        ├── authMiddleware.js   # JWT verify + role check
+        ├── errorHandler.js
+        └── validate.js         # express-validator wrapper
 ```
 
 ---
@@ -162,71 +174,97 @@ server/
 
 ### Prerequisites
 
-- **Node.js** v18 or higher
-- **MongoDB** (local instance or MongoDB Atlas account)
+- **Node.js** v18+
+- **MongoDB Atlas** account (or local MongoDB instance)
 - **npm** or **yarn**
 
-### Clone the Repository
+### 1. Clone and install
 
 ```bash
 git clone <repository-url>
 cd Complaint-Management-System
-```
 
-### Environment Variables
-
-Copy the example environment file and fill in your own values:
-
-```bash
-cp server/.env.example server/.env
-```
-
-Then edit `server/.env` with the following variables:
-
-```env
-# Server
-PORT=5000
-NODE_ENV=development
-
-# MongoDB
-MONGODB_URI=mongodb://localhost:27017/complaint-management
-# Or for Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/complaint-management
-
-# Authentication
-JWT_SECRET=your_jwt_secret_here
-JWT_EXPIRES_IN=7d
-
-# Client
-CLIENT_URL=http://localhost:5173
-
-# File Uploads (placeholder — choose one)
-UPLOAD_DIR=./uploads
-# CLOUDINARY_CLOUD_NAME=your_cloud_name
-# CLOUDINARY_API_KEY=your_api_key
-# CLOUDINARY_API_SECRET=your_api_secret
-```
-
-> **Note:** All secret values above are placeholders. Replace them with your own secure values before running in production.
-
-### Install and Run
-
-**Backend:**
-
-```bash
+# Backend
 cd server
+cp .env.example .env          # <-- required, do not skip
 npm install
-npm run dev
+
+# Frontend
+cd ../client
+cp .env.example .env          # <-- required, do not skip
+npm install
 ```
 
-**Frontend:**
+### 2. Configure environment variables
+
+**`server/.env`** — fill in before running:
+
+| Variable | Description |
+|---|---|
+| `PORT` | Server port (default: `5000`) |
+| `MONGODB_URI` | MongoDB Atlas connection string |
+| `JWT_SECRET` | Random string for signing JWTs |
+| `JWT_EXPIRES_IN` | Token lifetime (default: `7d`) |
+| `CLIENT_URL` | Frontend origin, e.g. `http://localhost:5173` |
+| `CLOUDINARY_CLOUD_NAME` | _(optional)_ Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | _(optional)_ Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | _(optional)_ Cloudinary API secret |
+
+**`client/.env`** — fill in before deploying to Vercel:
+
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Full backend URL, e.g. `https://your-api.onrender.com/api` _(leave empty for local dev — Vite proxy handles it)_ |
+
+> **MongoDB Atlas note:** Under Network Access, add `0.0.0.0/0` to allow connections from any environment (Render, Vercel, local dev).
+
+### 3. Run locally
 
 ```bash
+# Terminal 1 — backend
+cd server
+npm run dev
+
+# Terminal 2 — frontend
 cd client
-npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173` and the backend API at `http://localhost:5000`.
+Frontend: `http://localhost:5173` · Backend API: `http://localhost:5000`
+
+---
+
+## Deployment
+
+### Backend (Render)
+
+1. Push repo to GitHub
+2. Render → New Web Service → connect repo
+3. **Root directory:** `server`
+4. **Build command:** `npm install`
+5. **Start command:** `npm start`
+6. Set environment variables (see table above)
+
+### Frontend (Vercel)
+
+1. Vercel → New Project → connect repo
+2. **Root directory:** `client`
+3. **Framework preset:** Vite
+4. Set `VITE_API_URL` to your Render backend URL + `/api`
+
+### CORS dependency
+
+`CLIENT_URL` on Render **must exactly match** your Vercel deployment URL (including `https://`), otherwise browser requests will be blocked by CORS.
+
+---
+
+## Known Limitations
+
+1. **File storage is ephemeral on Render.** Render's disk is wiped on every redeploy. If Cloudinary env vars (`CLOUDINARY_*`) are not configured, uploaded attachments will be lost. The app still functions — complaints submit without crashing — but attachment files won't persist. **Fix:** sign up for a free Cloudinary account and add the three env vars.
+
+2. **MongoDB Atlas DNS SRV.** Some corporate or restrictive networks block DNS SRV records, which Atlas uses by default. The server includes a `dns.setServers(["8.8.8.8", "1.1.1.1"])` fallback wrapped in a try/catch, which resolves this in most cases. If connection still fails, switch to a direct `mongodb://` connection string instead of `mongodb+srv://`.
+
+3. **No real-time updates.** The notification system is poll-based (30-second interval). Socket.IO integration is planned but not yet implemented.
 
 ---
 
@@ -236,28 +274,28 @@ The frontend will be available at `http://localhost:5173` and the backend API at
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/api/auth/register` | Register a new student or admin account | Public |
-| POST | `/api/auth/login` | Authenticate user and issue JWT | Public |
+| POST | `/api/auth/register` | Register a new student account | Public |
+| POST | `/api/auth/login` | Authenticate and receive JWT | Public |
 | GET | `/api/auth/me` | Fetch current user profile | Student / Admin |
 
 ### Complaints (Student)
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/api/complaints` | Submit a new complaint with optional attachments | Student |
-| GET | `/api/complaints/mine` | List complaints submitted by the logged-in student | Student |
-| GET | `/api/complaints/:id` | Fetch a single complaint's details and status timeline | Student |
-| POST | `/api/complaints/:id/feedback` | Submit feedback/rating after resolution (bonus) | Student |
+| POST | `/api/complaints` | Submit a complaint with optional attachments | Student |
+| GET | `/api/complaints/mine` | List own complaints | Student |
+| GET | `/api/complaints/:id` | Get complaint details + timeline | Student |
+| POST | `/api/complaints/:id/feedback` | Submit rating after resolution | Student |
 
 ### Complaints (Admin)
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/api/complaints` | List all complaints with pagination/filter/search | Admin |
-| PATCH | `/api/complaints/:id/assign` | Assign a complaint to a department/staff member | Admin |
-| PATCH | `/api/complaints/:id/status` | Update complaint status with optional comment | Admin |
-| PATCH | `/api/complaints/:id/priority` | Update complaint priority | Admin |
-| POST | `/api/complaints/:id/resolve` | Mark resolved and record resolution details | Admin |
+| GET | `/api/complaints` | List all complaints (paginated, filterable) | Admin |
+| PATCH | `/api/complaints/:id/assign` | Assign to department/staff | Admin |
+| PATCH | `/api/complaints/:id/status` | Update status with optional comment | Admin |
+| PATCH | `/api/complaints/:id/priority` | Update priority | Admin |
+| POST | `/api/complaints/:id/resolve` | Mark resolved with resolution details | Admin |
 
 ### Departments
 
@@ -266,59 +304,62 @@ The frontend will be available at `http://localhost:5173` and the backend API at
 | GET | `/api/departments` | List departments | Admin |
 | POST | `/api/departments` | Create a department | Admin |
 
-### Statistics & Notifications
+### Statistics
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/api/stats/dashboard` | Aggregated counts by status/category/priority | Admin |
-| GET | `/api/notifications` | List notifications for the logged-in user | Student / Admin |
+| GET | `/api/stats/dashboard` | Aggregated counts (admin) | Admin |
+| GET | `/api/stats/student` | Student's own complaint stats | Student |
+
+### Notifications
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| GET | `/api/notifications` | List notifications | Student / Admin |
+| GET | `/api/notifications/unread-count` | Get unread count | Student / Admin |
+| PATCH | `/api/notifications/:id/read` | Mark one as read | Student / Admin |
+| PATCH | `/api/notifications/read-all` | Mark all as read | Student / Admin |
 
 ---
 
 ## Database Models
 
-### Users
-
-`name`, `email`, `password` (select: false), `role` (student | admin), `department` (for admin), `createdAt`
-
-### Complaints
-
-`title`, `description`, `category`, `location`, `priority` (low | medium | high | critical), `status`, `attachments` [{url, filename, mimeType}], `submittedBy` (ref User), `assignedDepartment`, `assignedTo` (ref User), `resolutionDetails`, `createdAt`, `updatedAt`
-
-### ComplaintUpdates
-
-`complaintId` (ref Complaint), `actor` (ref User), `actorRole`, `previousStatus`, `newStatus`, `comment`, `createdAt`
-
-### Departments
-
-`name`, `description`, `staffMembers` [ref User]
-
-### Notifications
-
-`owner` (ref User), `complaintId`, `type`, `title`, `message`, `isRead`, `createdAt`
+| Collection | Key Fields |
+|---|---|
+| **Users** | `name`, `email`, `password` (select: false), `role` (student / admin), `department` |
+| **Complaints** | `title`, `description`, `category`, `location`, `priority`, `status`, `attachments[]`, `submittedBy` (ref), `assignedDepartment`, `assignedTo` (ref), `resolutionDetails`, `feedback` |
+| **ComplaintUpdates** | `complaintId` (ref), `actor` (ref), `actorRole`, `previousStatus`, `newStatus`, `comment` |
+| **Departments** | `name`, `description`, `staffMembers[]` (ref) |
+| **Notifications** | `owner` (ref), `complaintId` (ref), `type`, `title`, `message`, `isRead` |
 
 ---
 
-## Development Phases / Roadmap
+## Screenshots
 
-- [x] **Phase 1** — Project setup: frontend/backend scaffolding, MongoDB connection, JWT authentication, role-based route protection
-- [x] **Phase 2** — Complaint submission & student experience: complaint form, student dashboard, complaint history, complaint details page
-- [x] **Phase 3** — Admin experience: admin dashboard, complaint list with search/filter, department/staff assignment, priority & status management, resolution notes
-- [x] **Phase 4** — Statistics & polish: basic dashboard statistics, responsive UI pass, loading/empty states, deployment
-- [ ] **Phase 5** — Bonus: notifications, resolution feedback/rating, analytics dashboard, escalation rules, AI-assisted categorization/summaries
+<!-- Add screenshots of each key page here -->
+
+<!-- ![Login Page](screenshots/login.png) -->
+
+<!-- ![Student Dashboard](screenshots/student-dashboard.png) -->
+
+<!-- ![Complaint Submission Form](screenshots/new-complaint.png) -->
+
+<!-- ![Admin Complaint List](screenshots/admin-complaints.png) -->
+
+<!-- ![Complaint Detail & Timeline](screenshots/complaint-detail.png) -->
 
 ---
 
-## Security Notes
+## Security
 
-- Passwords are hashed with **bcrypt** (cost factor 12)
-- JWTs are signed and verified using a secret from environment configuration
-- All request bodies are validated with **express-validator**
-- Admin-only routes are restricted via **role-based middleware**
-- File uploads are sanitized and size-limited
-- CORS is restricted to the deployed client URL
-- **Helmet** is used for HTTP security headers
-- Students cannot view other students' complaints — only admins have cross-user access
+- Passwords hashed with **bcrypt** (cost factor 12)
+- JWTs signed/verified from environment config
+- Request bodies validated with **express-validator**
+- Admin-only routes protected by role-based middleware
+- File uploads filtered by type and limited to 5 MB
+- CORS restricted to configured client origin
+- **Helmet** for HTTP security headers
+- Students cannot view other students' complaints
 
 ---
 
@@ -334,6 +375,4 @@ The frontend will be available at `http://localhost:5173` and the backend API at
 
 ## License
 
-This project is licensed under the MIT License. See `spec.md` for the complete technical specification.
-#   C o l l e g e - C o m p l a i n t - M a n a g e m e n t - S y s t e m  
- 
+This project is licensed under the MIT License.

@@ -3,10 +3,12 @@ const complaintService = require("../services/complaintService");
 const createComplaint = async (req, res, next) => {
   try {
     const { title, description, category, location, priority } = req.body;
+
+    // Determine attachment URLs: Cloudinary provides `path`, disk provides `/uploads/filename`
     const attachments = req.files
       ? req.files.map((f) => ({
-          url: `/uploads/${f.filename}`,
-          filename: f.filename,
+          url: f.path || `/uploads/${f.filename}`,
+          filename: f.originalname || f.filename,
           mimeType: f.mimetype,
         }))
       : [];
