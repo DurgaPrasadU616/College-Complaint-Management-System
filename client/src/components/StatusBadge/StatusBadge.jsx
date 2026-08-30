@@ -1,10 +1,28 @@
 const statusConfig = {
-  submitted: { color: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-400" },
-  under_review: { color: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-400" },
-  assigned: { color: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-400" },
-  in_progress: { color: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-400" },
-  resolved: { color: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-400" },
-  closed: { color: "bg-teal-50 text-teal-700 ring-teal-200", dot: "bg-teal-400" },
+  submitted: {
+    color: "bg-slate-100 text-slate-700 ring-slate-200",
+    dot: "bg-slate-400",
+  },
+  under_review: {
+    color: "bg-blue-50 text-blue-700 ring-blue-200",
+    dot: "bg-blue-500",
+  },
+  assigned: {
+    color: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+    dot: "bg-indigo-500",
+  },
+  in_progress: {
+    color: "bg-amber-50 text-amber-700 ring-amber-200",
+    dot: "bg-amber-500",
+  },
+  resolved: {
+    color: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  closed: {
+    color: "bg-slate-50 text-slate-600 ring-slate-200",
+    dot: "bg-slate-400",
+  },
 };
 
 export default function StatusBadge({ status }) {
