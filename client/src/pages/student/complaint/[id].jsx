@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, AlertCircle, ExternalLink, Star } from "lucide-react";
+import { ArrowLeft, AlertCircle, ExternalLink, Star, Sparkles } from "lucide-react";
 import api from "../../../services/api";
 import StatusBadge from "../../../components/StatusBadge/StatusBadge";
 import PriorityBadge from "../../../components/PriorityBadge/PriorityBadge";
@@ -83,6 +83,10 @@ export default function StudentComplaintDetail() {
   const [feedbackComment, setFeedbackComment] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
+  
+  // Two-way Comments
+  const [newComment, setNewComment] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchComplaint = async () => {
@@ -117,6 +121,25 @@ export default function StudentComplaintDetail() {
       toast.error(err.response?.data?.message || "Failed to submit feedback");
     } finally {
       setFeedbackSubmitting(false);
+    }
+  };
+
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    setCommentSubmitting(true);
+    try {
+      await api.post(`/complaints/${id}/comments`, { comment: newComment });
+      toast.success("Comment added");
+      setNewComment("");
+      
+      // Refresh the complaint data to pull the latest timeline updates
+      const { data } = await api.get(`/complaints/${id}`);
+      setUpdates(data.updates);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to post comment");
+    } finally {
+      setCommentSubmitting(false);
     }
   };
 
@@ -213,6 +236,47 @@ export default function StudentComplaintDetail() {
                 )}
               </dl>
             </div>
+
+            {complaint.ai?.category && (
+              <div className="card p-6 border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  <h2 className="section-title text-violet-900">AI Analysis</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <dt className="text-xs text-violet-600">Suggested Category</dt>
+                    <dd className="font-medium text-slate-900 mt-0.5">
+                      {complaint.ai.category}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-violet-600">Suggested Priority</dt>
+                    <dd className="font-medium text-slate-900 mt-0.5 capitalize">
+                      {complaint.ai.priority}
+                    </dd>
+                  </div>
+                </div>
+                {complaint.ai.summary && (
+                  <div className="mb-3">
+                    <dt className="text-xs text-violet-600 mb-1">Summary</dt>
+                    <dd className="text-sm text-slate-700">{complaint.ai.summary}</dd>
+                  </div>
+                )}
+                {complaint.ai.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {complaint.ai.tags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 bg-white/80 text-slate-600 text-xs rounded-full border border-violet-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Attachments */}
             {complaint.attachments?.length > 0 && (
@@ -345,6 +409,29 @@ export default function StudentComplaintDetail() {
                     />
                   ))}
                 </div>
+              )}
+              
+              {/* Comment Input */}
+              {!["resolved", "closed"].includes(complaint.status) && (
+                <form onSubmit={handleCommentSubmit} className="mt-6 border-t border-slate-100 pt-5">
+                  <label htmlFor="timeline-comment" className="sr-only">Add a comment</label>
+                  <textarea
+                    id="timeline-comment"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Type a message to the support team..."
+                    className="input resize-none mb-3 text-sm"
+                    rows={3}
+                    maxLength={1000}
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={commentSubmitting || !newComment.trim()}
+                    className="btn-primary w-full py-2 text-sm"
+                  >
+                    {commentSubmitting ? "Sending..." : "Send Message"}
+                  </button>
+                </form>
               )}
             </div>
           </div>

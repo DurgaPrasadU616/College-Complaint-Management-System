@@ -20,6 +20,8 @@ const complaintRoutes = require("./routes/complaintRoutes");
 const departmentRoutes = require("./routes/departmentRoutes");
 const statsRoutes = require("./routes/statsRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 
@@ -45,11 +47,12 @@ app.use(
 app.use(morgan("combined"));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Routes
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
+  const mongoose = require("mongoose");
+  const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+  res.json({ status: "ok", database: dbStatus });
 });
 
 app.use("/api/auth", authRoutes);
@@ -57,6 +60,8 @@ app.use("/api/complaints", complaintRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/uploads", uploadRoutes);
 
 // 404 handler for unknown API routes
 app.use((req, res, next) => {

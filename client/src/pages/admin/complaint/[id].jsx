@@ -10,12 +10,14 @@ import {
   Flag,
   CheckCircle2,
   X,
+  Sparkles,
 } from "lucide-react";
 import api from "../../../services/api";
 import StatusBadge from "../../../components/StatusBadge/StatusBadge";
 import PriorityBadge from "../../../components/PriorityBadge/PriorityBadge";
 import AppShell from "../../../components/AppShell/AppShell";
 import { DetailSkeleton } from "../../../components/Skeleton/Skeleton";
+import useAuthStore from "../../../store/authStore";
 
 const STATUSES = [
   "submitted",
@@ -116,6 +118,7 @@ function TimelineEntry({ update, isLast }) {
 
 export default function AdminComplaintDetail() {
   const { id } = useParams();
+  const { user } = useAuthStore();
   const [complaint, setComplaint] = useState(null);
   const [updates, setUpdates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -233,6 +236,11 @@ export default function AdminComplaintDetail() {
     );
   }
 
+  const isAssignedToMe =
+    complaint?.assignedTo &&
+    user &&
+    (complaint.assignedTo._id === user._id || complaint.assignedTo._id === user.id);
+
   if (!complaint) {
     return (
       <AppShell>
@@ -317,6 +325,52 @@ export default function AdminComplaintDetail() {
               </dl>
             </div>
 
+            {complaint.ai?.category && (
+              <div className="card p-6 border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  <h2 className="section-title text-violet-900">AI Analysis</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <dt className="text-xs text-violet-600">Suggested Category</dt>
+                    <dd className="font-medium text-slate-900 mt-0.5">
+                      {complaint.ai.category}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-violet-600">Suggested Priority</dt>
+                    <dd className="font-medium text-slate-900 mt-0.5 capitalize">
+                      {complaint.ai.priority}
+                    </dd>
+                  </div>
+                </div>
+                {complaint.ai.summary && (
+                  <div className="mb-3">
+                    <dt className="text-xs text-violet-600 mb-1">Summary</dt>
+                    <dd className="text-sm text-slate-700">{complaint.ai.summary}</dd>
+                  </div>
+                )}
+                {complaint.ai.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {complaint.ai.tags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 bg-white/80 text-slate-600 text-xs rounded-full border border-violet-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {complaint.ai.model && (
+                  <p className="text-[11px] text-violet-400 mt-3">
+                    Model: {complaint.ai.model}
+                  </p>
+                )}
+              </div>
+            )}
+
             {complaint.attachments?.length > 0 && (
               <div className="card p-6">
                 <h2 className="section-title mb-3">Attachments</h2>
@@ -393,7 +447,7 @@ export default function AdminComplaintDetail() {
                 <select
                   value={assignForm.assignedDepartment}
                   onChange={(e) =>
-                    setAssignForm({ ...assignForm, assignedDepartment: e.target.value })
+                    setAssignForm({ assignedDepartment: e.target.value, assignedTo: "" })
                   }
                   className="input text-sm"
                 >
@@ -404,9 +458,29 @@ export default function AdminComplaintDetail() {
                     </option>
                   ))}
                 </select>
+                
+                {assignForm.assignedDepartment && (
+                  <select
+                    value={assignForm.assignedTo}
+                    onChange={(e) =>
+                      setAssignForm({ ...assignForm, assignedTo: e.target.value })
+                    }
+                    className="input text-sm"
+                  >
+                    <option value="">Select staff member</option>
+                    {departments
+                      .find((d) => d.name === assignForm.assignedDepartment)
+                      ?.staffMembers?.map((staff) => (
+                        <option key={staff._id} value={staff._id}>
+                          {staff.name}
+                        </option>
+                      ))}
+                  </select>
+                )}
+
                 <button
                   type="submit"
-                  disabled={submitting === "assign"}
+                  disabled={submitting === "assign" || (!assignForm.assignedDepartment && !assignForm.assignedTo)}
                   className="btn-primary w-full py-2 text-sm"
                 >
                   {submitting === "assign" ? "Assigning..." : "Assign"}
@@ -415,13 +489,20 @@ export default function AdminComplaintDetail() {
             </div>
 
             {/* Update Status */}
-            <div className="card p-5">
-              <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
-                  <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+            <div className={`card p-5 ${!isAssignedToMe ? "opacity-75 bg-slate-50" : ""}`}>
+              <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                  </div>
+                  Update Status
                 </div>
-                Update Status
               </h3>
+              {!isAssignedToMe && (
+                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-3 border border-amber-100">
+                  You must be assigned to this complaint to update its status.
+                </p>
+              )}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -443,6 +524,7 @@ export default function AdminComplaintDetail() {
                     setStatusForm({ ...statusForm, status: e.target.value })
                   }
                   className="input text-sm"
+                  disabled={!isAssignedToMe}
                 >
                   <option value="">Select status</option>
                   {STATUSES.map((s) => (
@@ -459,10 +541,11 @@ export default function AdminComplaintDetail() {
                   placeholder="Comment (optional)"
                   rows={2}
                   className="input text-sm resize-none"
+                  disabled={!isAssignedToMe}
                 />
                 <button
                   type="submit"
-                  disabled={submitting === "status"}
+                  disabled={submitting === "status" || !isAssignedToMe}
                   className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
                 >
                   {submitting === "status" ? "Updating..." : "Update Status"}
@@ -503,13 +586,20 @@ export default function AdminComplaintDetail() {
             </div>
 
             {/* Resolve */}
-            <div className="card p-5">
-              <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <div className={`card p-5 ${!isAssignedToMe ? "opacity-75 bg-slate-50" : ""}`}>
+              <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  Resolve
                 </div>
-                Resolve
               </h3>
+              {!isAssignedToMe && (
+                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded mb-3 border border-amber-100">
+                  You must be assigned to this complaint to resolve it.
+                </p>
+              )}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -538,10 +628,11 @@ export default function AdminComplaintDetail() {
                   placeholder="How was it resolved?"
                   rows={3}
                   className="input text-sm resize-none"
+                  disabled={!isAssignedToMe}
                 />
                 <button
                   type="submit"
-                  disabled={submitting === "resolve"}
+                  disabled={submitting === "resolve" || !isAssignedToMe}
                   className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition"
                 >
                   {submitting === "resolve" ? "Resolving..." : "Mark Resolved"}

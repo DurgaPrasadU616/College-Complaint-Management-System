@@ -33,4 +33,6 @@ const complaintUpdateSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+complaintUpdateSchema.index({ complaintId: 1, createdAt: 1 });
+
 module.exports = mongoose.model("ComplaintUpdate", complaintUpdateSchema);

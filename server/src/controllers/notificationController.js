@@ -2,8 +2,10 @@ const notificationService = require("../services/notificationService");
 
 const getNotifications = async (req, res, next) => {
   try {
-    const notifications = await notificationService.getNotifications(req.user.id);
-    res.json(notifications);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const result = await notificationService.getNotifications(req.user.id, page, limit);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -36,4 +38,19 @@ const markAllAsRead = async (req, res, next) => {
   }
 };
 
-module.exports = { getNotifications, getUnreadCount, markAsRead, markAllAsRead };
+const deleteNotification = async (req, res, next) => {
+  try {
+    await notificationService.deleteNotification(req.params.id, req.user.id);
+    res.json({ message: "Notification deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+};

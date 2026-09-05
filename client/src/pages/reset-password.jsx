@@ -1,54 +1,33 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Shield, AlertCircle, Eye, EyeOff, Check, X } from "lucide-react";
+import { Shield, Eye, EyeOff, Check, X } from "lucide-react";
 import useAuthStore from "../store/authStore";
 
-export default function Register() {
+export default function ResetPassword() {
   const navigate = useNavigate();
-  const { register, loading, error, isAuthenticated, user, clearError } = useAuthStore();
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const { token } = useParams();
+  const { resetPassword, loading } = useAuthStore();
+  const [form, setForm] = useState({ password: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate(user.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
-    }
-  }, [isAuthenticated, user, navigate]);
-
-  useEffect(() => {
-    return () => clearError();
-  }, [clearError]);
-
   const validate = () => {
     const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Please enter your name.";
-    else if (form.name.trim().length > 100) newErrors.name = "Name must be under 100 characters.";
-    
-    if (!form.email.trim()) newErrors.email = "Please enter your email.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      newErrors.email = "Please enter a valid email address.";
-      
-    if (!form.password) newErrors.password = "Please enter a password.";
+    if (!form.password) newErrors.password = "Password is required.";
     else {
       if (form.password.length < 8) {
         newErrors.password = "Password must be at least 8 characters.";
       } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password)) {
-        newErrors.password = "Password must contain at least one uppercase letter, one lowercase letter, and one number.";
+        newErrors.password = "Password does not meet the required security rules.";
       }
     }
-    
+
     if (!form.confirmPassword) newErrors.confirmPassword = "Confirm password is required.";
     else if (form.password !== form.confirmPassword)
       newErrors.confirmPassword = "Passwords do not match.";
-      
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -57,15 +36,14 @@ export default function Register() {
     e.preventDefault();
     if (!validate()) return;
     try {
-      const data = await register(form.name.trim(), form.email.trim().toLowerCase(), form.password);
-      toast.success("Account created successfully!");
-      navigate(data.user.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
+      await resetPassword(token, form.password);
+      toast.success("Password reset successful!");
+      navigate("/login");
     } catch (err) {
-      const msg = err.response?.data?.message || "Registration failed";
-      if (msg.toLowerCase().includes("email already in use")) {
-         toast.error("An account with this email already exists.");
+      if (err.response?.status === 400 || err.response?.status === 404) {
+        toast.error("Password reset link is invalid or has expired.");
       } else {
-         toast.error(msg);
+        toast.error("Failed to reset password. Please try again.");
       }
     }
   };
@@ -74,7 +52,7 @@ export default function Register() {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
     
-    // Real-time password match validation for confirm password field
+    // Real-time password match validation
     if (e.target.name === "confirmPassword" && form.password) {
       if (e.target.value !== form.password) {
         setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match." }));
@@ -82,7 +60,6 @@ export default function Register() {
         setErrors(prev => ({ ...prev, confirmPassword: null }));
       }
     }
-    // Update match error if password changes and confirmPassword already has value
     if (e.target.name === "password" && form.confirmPassword) {
       if (e.target.value !== form.confirmPassword) {
         setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match." }));
@@ -108,77 +85,34 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      {/* Left: Form */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md animate-fade-in bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-          <Link to="/" className="flex items-center gap-2.5 mb-10">
-            <div className="w-9 h-9 gradient-accent rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="w-12 h-12 gradient-accent rounded-lg flex items-center justify-center">
+              <Shield className="w-7 h-7 text-white" />
             </div>
-            <span className="text-lg font-bold text-slate-900">Campus Report</span>
-          </Link>
-
-          <h1 className="text-2xl font-bold text-slate-900 mb-1">Create your account</h1>
-          <p className="text-slate-500 mb-8">Join as a student to start reporting issues</p>
-
-          {error && (
-            <div className="mb-6 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error.toLowerCase().includes("email already in use") ? "An account with this email already exists." : error}
-            </div>
-          )}
+          </div>
+          
+          <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">Create new password</h1>
+          <p className="text-center text-slate-500 mb-8">
+            Your new password must be different from previous used passwords.
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="reg-name" className="label text-sm font-medium text-slate-700 mb-1 block">
-                Full Name
-              </label>
-              <input
-                id="reg-name"
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                className={`input ${errors.name ? "input-error" : ""}`}
-                placeholder="John Doe"
-                autoFocus
-              />
-              {errors.name && (
-                <p className="mt-1.5 text-xs text-red-500">{errors.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="reg-email" className="label text-sm font-medium text-slate-700 mb-1 block">
-                Email
-              </label>
-              <input
-                id="reg-email"
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                className={`input ${errors.email ? "input-error" : ""}`}
-                placeholder="you@college.edu"
-              />
-              {errors.email && (
-                <p className="mt-1.5 text-xs text-red-500">{errors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="reg-password" className="label text-sm font-medium text-slate-700 mb-1 block">
-                Password
+              <label htmlFor="reset-password" className="label text-sm font-medium text-slate-700 mb-1 block">
+                New Password
               </label>
               <div className="relative">
                 <input
-                  id="reg-password"
+                  id="reset-password"
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={form.password}
                   onChange={handleChange}
                   className={`input w-full pr-10 ${errors.password ? "input-error" : ""}`}
                   placeholder="At least 8 characters"
+                  autoFocus
                 />
                 <button
                   type="button"
@@ -188,7 +122,7 @@ export default function Register() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              
+
               {/* Password Strength Indicator */}
               {form.password.length > 0 && (
                 <div className="mt-2">
@@ -214,18 +148,18 @@ export default function Register() {
             </div>
 
             <div>
-              <label htmlFor="reg-confirm" className="label text-sm font-medium text-slate-700 mb-1 block">
-                Confirm Password
+              <label htmlFor="reset-confirm" className="label text-sm font-medium text-slate-700 mb-1 block">
+                Confirm New Password
               </label>
               <div className="relative">
                 <input
-                  id="reg-confirm"
+                  id="reset-confirm"
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
                   className={`input w-full pr-10 ${errors.confirmPassword ? "input-error" : ""}`}
-                  placeholder="Re-enter your password"
+                  placeholder="Re-enter your new password"
                 />
                 <button
                   type="button"
@@ -249,7 +183,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading || (form.password && form.confirmPassword && form.password !== form.confirmPassword)}
-              className="btn-primary w-full py-3 mt-2"
+              className="btn-primary w-full py-3 mt-4"
             >
               {loading ? (
                 <span className="flex items-center gap-2 justify-center">
@@ -257,42 +191,21 @@ export default function Register() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Creating account...
+                  Resetting...
                 </span>
               ) : (
-                "Create Account"
+                "Reset Password"
               )}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-600">
-            Already have an account?{" "}
+          <p className="mt-8 text-center text-sm text-slate-500">
             <Link
               to="/login"
               className="font-semibold text-brand-600 hover:text-brand-700 transition-colors"
             >
-              Sign in
+              Back to Sign in
             </Link>
-          </p>
-        </div>
-      </div>
-
-      {/* Right: Illustration */}
-      <div className="hidden lg:flex flex-1 gradient-accent items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <svg className="w-full h-full" viewBox="0 0 400 400" fill="none">
-            <rect x="50" y="50" width="300" height="300" rx="20" stroke="white" strokeWidth="0.5" />
-            <rect x="100" y="100" width="200" height="200" rx="12" stroke="white" strokeWidth="0.5" />
-            <rect x="150" y="150" width="100" height="100" rx="8" stroke="white" strokeWidth="0.5" />
-          </svg>
-        </div>
-        <div className="relative text-center text-white max-w-sm">
-          <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-8 backdrop-blur-sm">
-            <Shield className="w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-bold mb-3">Your campus, your voice</h2>
-          <p className="text-white/70 leading-relaxed">
-            Register in seconds and start making a difference in your college community.
           </p>
         </div>
       </div>

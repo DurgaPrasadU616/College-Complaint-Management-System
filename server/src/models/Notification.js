@@ -1,5 +1,17 @@
 const mongoose = require("mongoose");
 
+const NOTIFICATION_TYPES = {
+  COMPLAINT_SUBMITTED: "COMPLAINT_SUBMITTED",
+  COMPLAINT_ASSIGNED: "COMPLAINT_ASSIGNED",
+  COMPLAINT_REASSIGNED: "COMPLAINT_REASSIGNED",
+  STATUS_CHANGED: "STATUS_CHANGED",
+  NEW_COMMENT: "NEW_COMMENT",
+  COMPLAINT_RESOLVED: "COMPLAINT_RESOLVED",
+  COMPLAINT_CLOSED: "COMPLAINT_CLOSED",
+  FEEDBACK_RECEIVED: "FEEDBACK_RECEIVED",
+  NEW_COMPLAINT: "NEW_COMPLAINT",
+};
+
 const notificationSchema = new mongoose.Schema(
   {
     owner: {
@@ -14,6 +26,7 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
+      enum: Object.values(NOTIFICATION_TYPES),
     },
     title: {
       type: String,
@@ -31,4 +44,8 @@ const notificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+notificationSchema.index({ owner: 1, isRead: 1 });
+notificationSchema.index({ owner: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Notification", notificationSchema);
+module.exports.NOTIFICATION_TYPES = NOTIFICATION_TYPES;

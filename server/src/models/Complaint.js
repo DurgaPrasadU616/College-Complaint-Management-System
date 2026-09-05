@@ -79,8 +79,24 @@ const complaintSchema = new mongoose.Schema(
         type: Date,
       },
     },
+    ai: {
+      category: { type: String, default: null },
+      priority: { type: String, default: null },
+      summary: { type: String, default: null },
+      tags: [{ type: String }],
+      model: { type: String, default: null },
+      analyzedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );
+
+complaintSchema.index({ submittedBy: 1, createdAt: -1 });
+complaintSchema.index({ status: 1 });
+complaintSchema.index({ category: 1 });
+complaintSchema.index({ priority: 1 });
+complaintSchema.index({ assignedTo: 1 });
+complaintSchema.index({ assignedDepartment: 1 });
+complaintSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Complaint", complaintSchema);

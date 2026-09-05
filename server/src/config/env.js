@@ -12,4 +12,18 @@ module.exports = {
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",
+
+  // Email Config
+  SMTP_HOST: process.env.SMTP_HOST || "",
+  SMTP_PORT: process.env.SMTP_PORT || "",
+  SMTP_EMAIL: process.env.SMTP_USER || process.env.SMTP_EMAIL || "",
+  SMTP_PASSWORD: process.env.SMTP_PASS || process.env.SMTP_PASSWORD || "",
+  FROM_EMAIL: process.env.FROM_EMAIL || "",
+  FROM_NAME: process.env.FROM_NAME || "",
+
+  // AI Classification
+  AI_PROVIDER: process.env.AI_PROVIDER || "none",
+  AI_API_KEY: process.env.AI_API_KEY || "",
+  AI_BASE_URL: process.env.AI_BASE_URL || "",
+  AI_MODEL: process.env.AI_MODEL || "",
 };

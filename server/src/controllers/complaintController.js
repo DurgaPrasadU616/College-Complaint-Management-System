@@ -4,7 +4,15 @@ const createComplaint = async (req, res, next) => {
   try {
     const { title, description, category, location, priority } = req.body;
 
-    // Determine attachment URLs: Cloudinary provides `path`, disk provides `/uploads/filename`
+    let ai = null;
+    if (req.body.ai) {
+      try {
+        ai = typeof req.body.ai === "string" ? JSON.parse(req.body.ai) : req.body.ai;
+      } catch (_) {
+        // ignore malformed AI data
+      }
+    }
+
     const attachments = req.files
       ? req.files.map((f) => ({
           url: f.path || `/uploads/${f.filename}`,
@@ -14,7 +22,7 @@ const createComplaint = async (req, res, next) => {
       : [];
 
     const complaint = await complaintService.createComplaint(
-      { title, description, category, location, priority, attachments },
+      { title, description, category, location, priority, attachments, ai },
       req.user.id
     );
     res.status(201).json(complaint);
@@ -25,8 +33,17 @@ const createComplaint = async (req, res, next) => {
 
 const getMyComplaints = async (req, res, next) => {
   try {
-    const complaints = await complaintService.getStudentComplaints(req.user.id);
-    res.json(complaints);
+    const { search, page, limit, status, category, priority, sort } = req.query;
+    const result = await complaintService.getStudentComplaints(req.user.id, {
+      search,
+      page,
+      limit,
+      status,
+      category,
+      priority,
+      sort,
+    });
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -34,7 +51,7 @@ const getMyComplaints = async (req, res, next) => {
 
 const getComplaint = async (req, res, next) => {
   try {
-    const result = await complaintService.getComplaintById(req.params.id);
+    const result = await complaintService.getComplaintById(req.params.id, req.user);
     res.json(result);
   } catch (error) {
     next(error);
@@ -43,7 +60,8 @@ const getComplaint = async (req, res, next) => {
 
 const getAllComplaints = async (req, res, next) => {
   try {
-    const { status, category, priority, department, search, page, limit } = req.query;
+    const { status, category, priority, department, search, page, limit, assignedTo, unassigned, sort } =
+      req.query;
     const result = await complaintService.getAllComplaints({
       status,
       category,
@@ -52,6 +70,9 @@ const getAllComplaints = async (req, res, next) => {
       search,
       page,
       limit,
+      assignedTo,
+      unassigned,
+      sort,
     });
     res.json(result);
   } catch (error) {
@@ -129,6 +150,16 @@ const submitFeedback = async (req, res, next) => {
   }
 };
 
+const addComment = async (req, res, next) => {
+  try {
+    const { comment } = req.body;
+    const complaint = await complaintService.addComment(req.params.id, comment, req.user);
+    res.json(complaint);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createComplaint,
   getMyComplaints,
@@ -139,4 +170,5 @@ module.exports = {
   updatePriority,
   resolveComplaint,
   submitFeedback,
+  addComment,
 };

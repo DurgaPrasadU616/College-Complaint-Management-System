@@ -10,23 +10,28 @@ import {
   Menu,
   X,
   ChevronRight,
+  Bell,
 } from "lucide-react";
 import useAuthStore from "../../store/authStore";
+import useNotificationStore from "../../store/notificationStore";
 import NotificationBell from "../NotificationBell/NotificationBell";
 
 const studentLinks = [
   { to: "/student/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { to: "/student/new-complaint", label: "New Complaint", Icon: FilePlus },
   { to: "/student/my-complaints", label: "My Complaints", Icon: ClipboardList },
+  { to: "/student/notifications", label: "Notifications", Icon: Bell },
 ];
 
 const adminLinks = [
   { to: "/admin/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { to: "/admin/complaints", label: "All Complaints", Icon: List },
+  { to: "/admin/notifications", label: "Notifications", Icon: Bell },
 ];
 
 export default function AppShell({ children }) {
   const { user, logout } = useAuthStore();
+  const { unreadCount } = useNotificationStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -88,7 +93,7 @@ export default function AppShell({ children }) {
                     <Link
                       key={to}
                       to={to}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative ${
                         active
                           ? "bg-brand-50 text-brand-700"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -96,6 +101,11 @@ export default function AppShell({ children }) {
                     >
                       <Icon className="w-4 h-4" />
                       {label}
+                      {to.includes("/notifications") && unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center px-1 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -174,7 +184,7 @@ export default function AppShell({ children }) {
                   <Link
                     key={to}
                     to={to}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative ${
                       active
                         ? "bg-brand-50 text-brand-700"
                         : "text-slate-600 hover:bg-slate-100"
@@ -182,6 +192,11 @@ export default function AppShell({ children }) {
                   >
                     <Icon className="w-4 h-4" />
                     {label}
+                    {to.includes("/notifications") && unreadCount > 0 && (
+                      <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

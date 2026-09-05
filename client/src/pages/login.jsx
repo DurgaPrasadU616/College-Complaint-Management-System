@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Shield, AlertCircle } from "lucide-react";
+import { Shield, AlertCircle, Eye, EyeOff } from "lucide-react";
 import useAuthStore from "../store/authStore";
 
 export default function Login() {
@@ -9,6 +9,8 @@ export default function Login() {
   const { login, loading, error, isAuthenticated, user, clearError } = useAuthStore();
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -22,10 +24,10 @@ export default function Login() {
 
   const validate = () => {
     const newErrors = {};
-    if (!form.email.trim()) newErrors.email = "Email is required";
+    if (!form.email.trim()) newErrors.email = "Please enter your email.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      newErrors.email = "Must be a valid email";
-    if (!form.password) newErrors.password = "Password is required";
+      newErrors.email = "Please enter a valid email address.";
+    if (!form.password) newErrors.password = "Please enter your password.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -34,19 +36,21 @@ export default function Login() {
     e.preventDefault();
     if (!validate()) return;
     try {
-      const data = await login(form.email, form.password);
+      const data = await login(form.email.trim().toLowerCase(), form.password, rememberMe);
       toast.success("Welcome back!");
       navigate(data.user.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed");
+      // Error string is pre-mapped by authStore, so we can display it.
+      const mappedError = useAuthStore.getState().error;
+      toast.error(mappedError || "Login failed");
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-slate-50">
       {/* Left: Form */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md animate-fade-in">
+        <div className="w-full max-w-md animate-fade-in bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
           <Link to="/" className="flex items-center gap-2.5 mb-10">
             <div className="w-9 h-9 gradient-accent rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
@@ -66,7 +70,7 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="login-email" className="label">
+              <label htmlFor="login-email" className="label text-sm font-medium text-slate-700 mb-1 block">
                 Email
               </label>
               <input
@@ -87,32 +91,63 @@ export default function Login() {
             </div>
 
             <div>
-              <label htmlFor="login-password" className="label">
-                Password
-              </label>
-              <input
-                id="login-password"
-                type="password"
-                value={form.password}
-                onChange={(e) => {
-                  setForm({ ...form, password: e.target.value });
-                  if (errors.password) setErrors({ ...errors, password: null });
-                }}
-                className={`input ${errors.password ? "input-error" : ""}`}
-                placeholder="Enter your password"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="login-password" className="label text-sm font-medium text-slate-700 block mb-0">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => {
+                    setForm({ ...form, password: e.target.value });
+                    if (errors.password) setErrors({ ...errors, password: null });
+                  }}
+                  className={`input w-full pr-10 ${errors.password ? "input-error" : ""}`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1.5 text-xs text-red-500">{errors.password}</p>
               )}
             </div>
 
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-slate-700 cursor-pointer">
+                Remember me
+              </label>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-3"
+              className="btn-primary w-full py-3 mt-2"
             >
               {loading ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 justify-center">
                   <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle
                       className="opacity-25"
@@ -136,7 +171,7 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-500">
+          <p className="mt-8 text-center text-sm text-slate-600">
             Don't have an account?{" "}
             <Link
               to="/register"

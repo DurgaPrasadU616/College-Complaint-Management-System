@@ -13,9 +13,23 @@ router.post(
   authorize("student"),
   upload.array("attachments", 5),
   [
-    body("title").trim().notEmpty().withMessage("Title is required"),
-    body("description").trim().notEmpty().withMessage("Description is required"),
+    body("title")
+      .trim()
+      .notEmpty()
+      .withMessage("Title is required")
+      .isLength({ max: 100 })
+      .withMessage("Title must be under 100 characters"),
+    body("description")
+      .trim()
+      .notEmpty()
+      .withMessage("Description is required")
+      .isLength({ max: 2000 })
+      .withMessage("Description must be under 2000 characters"),
     body("category").notEmpty().withMessage("Category is required"),
+    body("priority")
+      .optional()
+      .isIn(["low", "medium", "high", "critical"])
+      .withMessage("Invalid priority"),
   ],
   validate,
   complaintController.createComplaint
@@ -123,6 +137,22 @@ router.post(
   ],
   validate,
   complaintController.submitFeedback
+);
+
+// Shared: add comment
+router.post(
+  "/:id/comments",
+  protect,
+  [
+    body("comment")
+      .trim()
+      .notEmpty()
+      .withMessage("Comment is required")
+      .isLength({ max: 1000 })
+      .withMessage("Comment must be under 1000 characters"),
+  ],
+  validate,
+  complaintController.addComment
 );
 
 module.exports = router;

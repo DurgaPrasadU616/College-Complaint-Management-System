@@ -1,7 +1,9 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const env = require("../config/env");
+const sendEmail = require("../utils/sendEmail");
 
 const register = async ({ name, email, password, role, department }) => {
   const existingUser = await User.findOne({ email });
@@ -74,4 +76,68 @@ const generateTokenResponse = (user) => {
   };
 };
 
-module.exports = { register, login, getMe };
+const forgotPassword = async (email) => {
+  const user = await User.findOne({ email });
+  if (!user) {
+    // Prevent email enumeration
+    return { message: "If an account exists with this email, you will receive password reset instructions." };
+  }
+
+  const resetToken = crypto.randomBytes(20).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+  user.resetPasswordToken = hashedToken;
+  user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${env.CLIENT_URL || "http://localhost:5173"}/reset-password/${resetToken}`;
+  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Password reset token",
+      message,
+      html: `<p>You are receiving this email because you (or someone else) has requested the reset of a password.</p>
+             <p>Please click on the link below to reset your password:</p>
+             <a href="${resetUrl}" target="_blank">Reset Password</a>`,
+    });
+    return { message: "If an account exists with this email, you will receive password reset instructions." };
+  } catch (err) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+    
+    const error = new Error("Email could not be sent");
+    error.statusCode = 500;
+    throw error;
+  }
+};
+
+const resetPassword = async (token, newPassword) => {
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    const error = new Error("Invalid or expired token");
+    error.statusCode = 400;
+    error.code = "INVALID_TOKEN";
+    throw error;
+  }
+
+  const salt = await bcrypt.genSalt(12);
+  user.password = await bcrypt.hash(newPassword, salt);
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
+  await user.save();
+
+  return { message: "Password reset successful" };
+};
+
+module.exports = { register, login, getMe, forgotPassword, resetPassword };

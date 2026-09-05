@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, Upload, X, ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, X, ImageIcon, Sparkles, Check, AlertCircle } from "lucide-react";
 import api from "../../services/api";
 import AppShell from "../../components/AppShell/AppShell";
 
@@ -16,6 +16,13 @@ const CATEGORIES = [
   { value: "Other", icon: "📋" },
 ];
 
+const PRIORITY_LABELS = {
+  low: "Low - Minor issue, no immediate impact",
+  medium: "Medium - Standard issue, needs attention",
+  high: "High - Significant impact on studies/life",
+  critical: "Critical - Emergency, immediate action required",
+};
+
 export default function NewComplaint() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -24,17 +31,40 @@ export default function NewComplaint() {
     description: "",
     category: "",
     location: "",
+    priority: "medium",
   });
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiError, setAiError] = useState(null);
+  const [aiAccepted, setAiAccepted] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/ai/status")
+      .then(({ data }) => setAiEnabled(data.enabled))
+      .catch(() => setAiEnabled(false));
+  }, []);
+
   const validate = () => {
     const newErrors = {};
-    if (!form.title.trim()) newErrors.title = "Title is required";
-    if (!form.description.trim()) newErrors.description = "Description is required";
-    if (!form.category) newErrors.category = "Category is required";
+    if (!form.title.trim())
+      newErrors.title = "Please enter a short title describing your complaint.";
+    else if (form.title.trim().length > 100)
+      newErrors.title = "Title must be under 100 characters.";
+
+    if (!form.description.trim())
+      newErrors.description = "Please provide more details about your complaint.";
+    else if (form.description.trim().length > 2000)
+      newErrors.description = "Description is too long (max 2000 characters).";
+
+    if (!form.category) newErrors.category = "Please select a category.";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -49,6 +79,19 @@ export default function NewComplaint() {
       formData.append("description", form.description);
       formData.append("category", form.category);
       formData.append("location", form.location);
+      formData.append("priority", form.priority);
+      if (aiSuggestion) {
+        formData.append(
+          "ai",
+          JSON.stringify({
+            category: aiSuggestion.category,
+            priority: aiSuggestion.priority,
+            summary: aiSuggestion.summary,
+            tags: aiSuggestion.tags,
+            model: aiSuggestion.model,
+          })
+        );
+      }
       for (const file of files) formData.append("attachments", file);
       await api.post("/complaints", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -65,6 +108,7 @@ export default function NewComplaint() {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
+    if (aiAccepted) setAiAccepted(false);
   };
 
   const handleFiles = (newFiles) => {
@@ -90,6 +134,50 @@ export default function NewComplaint() {
     setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleAnalyze = useCallback(async () => {
+    if (!form.title.trim() || !form.description.trim()) {
+      toast.error("Please enter a title and description first.");
+      return;
+    }
+    setAiLoading(true);
+    setAiError(null);
+    setAiSuggestion(null);
+    setAiAccepted(false);
+    try {
+      const { data } = await api.post("/ai/classify", {
+        title: form.title.trim(),
+        description: form.description.trim(),
+      });
+      setAiSuggestion(data);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message || "AI analysis is temporarily unavailable.";
+      setAiError(msg);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [form.title, form.description]);
+
+  const handleAcceptSuggestion = () => {
+    if (!aiSuggestion) return;
+    setForm((f) => ({
+      ...f,
+      category: aiSuggestion.category,
+      priority: aiSuggestion.priority,
+    }));
+    setAiAccepted(true);
+    if (errors.category) setErrors((e) => ({ ...e, category: null }));
+    toast.success("AI suggestions applied!");
+  };
+
+  const handleDismissSuggestion = () => {
+    setAiSuggestion(null);
+    setAiError(null);
+    setAiAccepted(false);
+  };
+
+  const canAnalyze = aiEnabled && form.title.trim().length > 0 && form.description.trim().length > 10;
+
   return (
     <AppShell>
       <div className="page-container">
@@ -108,7 +196,7 @@ export default function NewComplaint() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="card p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="card p-6 sm:p-8 space-y-6">
             {/* Title */}
             <div>
               <label htmlFor="complaint-title" className="label">
@@ -127,6 +215,177 @@ export default function NewComplaint() {
                 <p className="mt-1.5 text-xs text-red-500">{errors.title}</p>
               )}
             </div>
+
+            {/* Description */}
+            <div>
+              <div className="flex items-center justify-between">
+                <label htmlFor="complaint-description" className="label">
+                  Description *
+                </label>
+                <span
+                  className={`text-xs ${
+                    form.description.length > 2000 ? "text-red-500" : "text-slate-400"
+                  }`}
+                >
+                  {form.description.length} / 2000
+                </span>
+              </div>
+              <textarea
+                id="complaint-description"
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                rows={5}
+                className={`input resize-none ${errors.description ? "input-error" : ""}`}
+                placeholder="Describe the issue in detail — what's wrong, where exactly, when you noticed it..."
+              />
+              {errors.description && (
+                <p className="mt-1.5 text-xs text-red-500">{errors.description}</p>
+              )}
+            </div>
+
+            {/* AI Analyze Button */}
+            {aiEnabled && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={!canAnalyze || aiLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-medium text-sm rounded-lg hover:from-violet-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  {aiLoading ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Analyze with AI
+                    </>
+                  )}
+                </button>
+                {!canAnalyze && !aiLoading && (
+                  <span className="text-xs text-slate-400">
+                    Enter title and description to analyze
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* AI Error */}
+            {aiError && (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-amber-800">{aiError}</p>
+                  <button
+                    type="button"
+                    onClick={() => setAiError(null)}
+                    className="text-xs text-amber-600 hover:text-amber-700 font-medium mt-1"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* AI Suggestion Card */}
+            {aiSuggestion && (
+              <div
+                className={`border rounded-xl p-5 transition-all ${
+                  aiAccepted
+                    ? "bg-emerald-50 border-emerald-200"
+                    : "bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-500" />
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      {aiAccepted ? "AI Suggestions Applied" : "AI Suggestion"}
+                    </h3>
+                  </div>
+                  {!aiAccepted ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAcceptSuggestion}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDismissSuggestion}
+                        className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleDismissSuggestion}
+                      className="text-xs text-slate-500 hover:text-slate-700"
+                    >
+                      Undo
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Suggested Category</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {CATEGORIES.find((c) => c.value === aiSuggestion.category)?.icon}{" "}
+                      {aiSuggestion.category}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Suggested Priority</p>
+                    <p className="text-sm font-semibold text-slate-900 capitalize">
+                      {aiSuggestion.priority}
+                    </p>
+                  </div>
+                </div>
+
+                {aiSuggestion.summary && (
+                  <div className="mb-3">
+                    <p className="text-xs text-slate-500 mb-1">Summary</p>
+                    <p className="text-sm text-slate-700">{aiSuggestion.summary}</p>
+                  </div>
+                )}
+
+                {aiSuggestion.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {aiSuggestion.tags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 bg-white/80 text-slate-600 text-xs rounded-full border border-slate-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Category */}
             <div>
@@ -156,39 +415,41 @@ export default function NewComplaint() {
               )}
             </div>
 
-            {/* Location */}
-            <div>
-              <label htmlFor="complaint-location" className="label">
-                Location
-              </label>
-              <input
-                id="complaint-location"
-                type="text"
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-                className="input"
-                placeholder="e.g. Room 301, Block B, Hostel 2"
-              />
-            </div>
+            {/* Location & Priority Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="complaint-location" className="label">
+                  Location
+                </label>
+                <input
+                  id="complaint-location"
+                  type="text"
+                  name="location"
+                  value={form.location}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="e.g. Room 301, Block B, Hostel 2"
+                />
+              </div>
 
-            {/* Description */}
-            <div>
-              <label htmlFor="complaint-description" className="label">
-                Description *
-              </label>
-              <textarea
-                id="complaint-description"
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows={5}
-                className={`input resize-none ${errors.description ? "input-error" : ""}`}
-                placeholder="Describe the issue in detail — what's wrong, where exactly, when you noticed it..."
-              />
-              {errors.description && (
-                <p className="mt-1.5 text-xs text-red-500">{errors.description}</p>
-              )}
+              <div>
+                <label htmlFor="complaint-priority" className="label">
+                  Suggested Priority
+                </label>
+                <select
+                  id="complaint-priority"
+                  name="priority"
+                  value={form.priority}
+                  onChange={handleChange}
+                  className="input"
+                >
+                  {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* File Upload */}
@@ -203,7 +464,6 @@ export default function NewComplaint() {
                 className="hidden"
               />
 
-              {/* Previews */}
               {previews.length > 0 && (
                 <div className="flex flex-wrap gap-3 mb-3">
                   {previews.map((preview, i) => (
@@ -260,11 +520,7 @@ export default function NewComplaint() {
               >
                 {submitting ? (
                   <span className="flex items-center gap-2">
-                    <svg
-                      className="animate-spin w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                       <circle
                         className="opacity-25"
                         cx="12"
@@ -284,12 +540,7 @@ export default function NewComplaint() {
                 ) : (
                   <>
                     Submit Complaint
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
