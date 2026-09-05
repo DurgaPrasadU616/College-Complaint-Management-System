@@ -59,6 +59,9 @@ router.post(
   authController.login
 );
 
+router.get("/me", protect, authController.getMe);
+
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 login requests per windowMs

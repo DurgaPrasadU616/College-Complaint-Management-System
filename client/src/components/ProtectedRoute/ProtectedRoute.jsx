@@ -4,16 +4,24 @@ import { ShieldAlert } from "lucide-react";
 import useAuthStore from "../../store/authStore";
 
 export default function ProtectedRoute({ children, role }) {
-  const { user, isAuthenticated, loadUser } = useAuthStore();
-  const [checking, setChecking] = useState(true);
+  const { user, isAuthenticated, token, loadUser } = useAuthStore();
+  const [checking, setChecking] = useState(() => !user && !!token);
 
   useEffect(() => {
+    let isMounted = true;
     const check = async () => {
-      await loadUser();
-      setChecking(false);
+      if (!user && token) {
+        await loadUser();
+      }
+      if (isMounted) {
+        setChecking(false);
+      }
     };
     check();
-  }, [loadUser]);
+    return () => {
+      isMounted = false;
+    };
+  }, [loadUser, user, token]);
 
   if (checking) {
     return (

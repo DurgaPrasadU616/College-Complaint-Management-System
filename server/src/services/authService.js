@@ -56,7 +56,14 @@ const getMe = async (userId) => {
     error.code = "NOT_FOUND";
     throw error;
   }
-  return user;
+  return {
+    id: user._id,
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    department: user.department,
+  };
 };
 
 const generateTokenResponse = (user) => {

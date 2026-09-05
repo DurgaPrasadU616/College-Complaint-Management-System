@@ -37,8 +37,10 @@ const useAuthStore = create((set, get) => ({
         err.response?.data?.message ||
         err.response?.data?.errors?.[0]?.message ||
         "Registration failed";
-      set({ loading: false, error: message });
+      set({ error: message });
       throw err;
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -74,8 +76,10 @@ const useAuthStore = create((set, get) => ({
       } else {
         message = err.response?.data?.message || "Invalid email or password.";
       }
-      set({ loading: false, error: message });
+      set({ error: message });
       throw err;
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -94,12 +98,16 @@ const useAuthStore = create((set, get) => ({
         sessionStorage.setItem("user", JSON.stringify(data));
       }
       set({ user: data, token, isAuthenticated: true });
-    } catch {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("user");
-      set({ user: null, token: null, isAuthenticated: false });
+      return data;
+    } catch (err) {
+      // Only clear user credentials if server explicitly reports 401 Unauthorized
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+        set({ user: null, token: null, isAuthenticated: false });
+      }
     }
   },
 
