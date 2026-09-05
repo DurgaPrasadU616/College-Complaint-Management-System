@@ -29,14 +29,26 @@ const app = express();
 app.use(helmet());
 
 // CORS — support comma-separated CLIENT_URL list for local dev + production
-const allowedOrigins = env.CLIENT_URL.split(",").map((u) => u.trim());
+const allowedOrigins = (env.CLIENT_URL || "")
+  .split(",")
+  .map((u) => u.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (curl, mobile apps, server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) return callback(null, true);
+      const cleanOrigin = origin.trim().replace(/\/+$/, "");
+      if (
+        allowedOrigins.length === 0 ||
+        allowedOrigins.includes(cleanOrigin) ||
+        allowedOrigins.includes("*") ||
+        cleanOrigin.endsWith(".vercel.app")
+      ) {
         callback(null, true);
       } else {
+        console.warn(`Blocked by CORS: origin="${origin}", allowed=${JSON.stringify(allowedOrigins)}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
