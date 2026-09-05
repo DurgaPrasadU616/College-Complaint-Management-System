@@ -126,17 +126,68 @@ async function classifyWithOpenAI(title, description) {
   return validateAndSanitize(parsed);
 }
 
+async function classifyWithGemini(title, description) {
+  const apiKey = env.GEMINI_API_KEY || env.AI_API_KEY;
+  const baseUrl = env.AI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta/openai";
+  const model = env.AI_MODEL || "gemini-1.5-flash";
+
+  if (!apiKey) {
+    throw new Error("Gemini API key not configured (set AI_API_KEY or GEMINI_API_KEY in .env)");
+  }
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: buildUserPrompt(title, description) },
+      ],
+      temperature: 0.3,
+      max_tokens: 250,
+      response_format: { type: "json_object" },
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "Unknown error");
+    throw new Error(`Gemini API error (${response.status}): ${errText.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Empty Gemini response");
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error("Gemini returned invalid JSON");
+  }
+
+  return validateAndSanitize(parsed);
+}
+
 async function classifyWithLocal(title, description) {
   throw new Error(
-    "Local model not configured. Set AI_PROVIDER=none or configure AI_PROVIDER=openai with an API key."
+    "Local model not configured. Set AI_PROVIDER=none or configure AI_PROVIDER=gemini or AI_PROVIDER=openai with an API key."
   );
 }
 
 async function classifyComplaint(title, description) {
-  const provider = env.AI_PROVIDER || "none";
+  const provider = (env.AI_PROVIDER || "none").toLowerCase();
 
   if (provider === "none" || !provider) {
     throw new Error("AI classification is not enabled");
+  }
+
+  if (provider === "gemini") {
+    return classifyWithGemini(title, description);
   }
 
   if (provider === "openai") {

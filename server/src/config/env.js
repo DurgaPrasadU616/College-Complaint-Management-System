@@ -23,7 +23,9 @@ module.exports = {
 
   // AI Classification
   AI_PROVIDER: process.env.AI_PROVIDER || "none",
-  AI_API_KEY: process.env.AI_API_KEY || "",
+  AI_API_KEY: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || "",
   AI_BASE_URL: process.env.AI_BASE_URL || "",
   AI_MODEL: process.env.AI_MODEL || "",
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.AI_API_KEY || "",
 };
+
